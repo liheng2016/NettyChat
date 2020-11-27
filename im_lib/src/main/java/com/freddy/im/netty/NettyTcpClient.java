@@ -70,7 +70,7 @@ public class NettyTcpClient implements IMSClientInterface {
     private String currentHost = null;// 当前连接host
     private int currentPort = -1;// 当前连接port
 
-    private MsgTimeoutTimerManager msgTimeoutTimerManager;
+    private MsgTimeoutTimerManager msgTimeoutTimerManager;// 消息发送超时定时器管理
 
     private NettyTcpClient() {
     }
@@ -561,14 +561,26 @@ public class NettyTcpClient implements IMSClientInterface {
     private void closeChannel() {
         try {
             if (channel != null) {
-                channel.close();
-                channel.eventLoop().shutdownGracefully();
+                try {
+                    removeHandler(HeartbeatHandler.class.getSimpleName());
+                    removeHandler(TCPReadHandler.class.getSimpleName());
+                    removeHandler(IdleStateHandler.class.getSimpleName());
+                } finally {
+                    try {
+                        channel.close();
+                    } catch (Exception ex) {
+                    }
+                    try {
+                        channel.eventLoop().shutdownGracefully();
+                    } catch (Exception ex) {
+                    }
+
+                    channel = null;
+                }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("关闭channel出错，reason:" + e.getMessage());
-        } finally {
-            channel = null;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            System.out.println("关闭channel出错，reason:" + ex.getMessage());
         }
     }
 
